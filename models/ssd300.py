@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch
 
 # (N, 3, 300, 300)
-# x = torch.zeros((1, 3, 300, 300), dtype=torch.float)
+x = torch.zeros((1, 3, 300, 300), dtype=torch.float)
 
 vgg16_cfg = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
             512, 512, 512]
@@ -59,20 +59,24 @@ class SSD300(nn.Module):
     def __init__(self, init_weights=True, num_class=20):
         super(SSD300, self).__init__()
         self.ssd = make_layers(vgg16_cfg, extra_cfg) # nn.ModuleList
+        # Since lower level features (conv4_3_feats) have considerably larger scales, we take the L2 norm and rescale
+        # Rescale factor is initially set at 20, but is learned for each channel during back-prop
+        self.rescale_factors = nn.Parameter(torch.FloatTensor(1, 512, 1, 1))  # there are 512 channels in conv4_3_feats
+        nn.init.constant_(self.rescale_factors, 20)
+
         self.num_defaults = [4, 6, 6, 6, 4, 4]
         self.out_channels = [] # out channels of conf4_3, 7, 8_2, 9_2, 10_2, 11_2
         self.loc_conv = [] # for bbox regression
         self.cls_conv = [] # for classification
-        self.l2_norm = L2Norm(512, scale=20)
-        for i in [22, 34, 38, 42, 46, 50]:
+        for i in [21, 33, 37, 41, 45, 49]:
             self.out_channels.append(self.ssd[i].out_channels)
-
+        print('out_channels:',self.out_channels)
         for nd, oc in zip(self.num_defaults, self.out_channels):
             self.loc_conv.append(nn.Conv2d(oc, nd * 4, kernel_size=3, padding=1))
             self.cls_conv.append(nn.Conv2d(oc, nd * num_class, kernel_size=3, padding=1))
 
-        self.loc_conv = nn.ModuleList(self.loc)
-        self.cls_conv = nn.ModuleList(self.conf)
+        self.loc_conv = nn.ModuleList(self.loc_conv)
+        self.cls_conv = nn.ModuleList(self.cls_conv)
 
         if init_weights:
             self._initialize_weights()
@@ -98,11 +102,34 @@ class SSD300(nn.Module):
         #         features.append(x)
         # 아앗.. batch norm 할 경우 생각 x.... 나중에 고쳐볼게요...
         for i in range(35, 51):
+            x = self.ssd[i](x)
             if i in [38, 42, 46, 50]:
-                x = self.ssd[i](x)
                 features.append(x) # out_ch 512, 256, 256, 256
 
-        return tuple(features)
+        classes_scores= []
+        batch_size = self.cls_conv[0](features[0]).size(0)
+        for i, feature in enumerate(features):
+            f = self.cls_conv[i](feature)
+            print(i, 'conv:', f.size())
+            f = f.permute(0, 2, 3, 1).contiguous()  # (N, 38, 38, 16), to match prior-box order (after .view())
+            print(i, 'permute, contiguous:', f.size())
+            # (.contiguous() ensures it is stored in a contiguous chunk of memory, needed for .view() below)
+            f = f.view(batch_size, -1, 4)  # (N, 5776, 4), there are a total 5776 boxes on this feature map
+            print(i, 'view:', f.size())
+            classes_scores.append(f)
+
+        locs = []
+        for i, feature in enumerate(features):
+            l = self.loc_conv[i](feature)  # (N, 16, 38, 38)
+            print(i, 'conv:', l.size())
+            l = l.permute(0, 2, 3, 1).contiguous()  # (N, 38, 38, 16), to match prior-box order (after .view())
+            print(i, 'permute, contiguous:', l.size())
+            # (.contiguous() ensures it is stored in a contiguous chunk of memory, needed for .view() below)
+            l = l.view(batch_size, -1, 4)  # (N, 5776, 4), there are a total 5776 boxes on this feature map
+            print(i, 'view:', l.size())
+            locs.append(l)
+
+        return locs, classes_scores
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -111,4 +138,6 @@ class SSD300(nn.Module):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-print(make_layers(vgg16_cfg, extra_cfg)[5].out_channels)
+print(make_layers(vgg16_cfg, extra_cfg))
+ssd = SSD300()
+ssd.forward(x)
