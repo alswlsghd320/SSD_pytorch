@@ -39,7 +39,7 @@ def make_layers(vgg16_cfg, extra_cfg, batch_norm=False):
 
     in_channels = 1024
     for k, v in enumerate(extra_cfg):
-        flag = False # 이것은 단지 그들이 깃발 변수가 무엇인지에 따라 커널 크기를 1 또는 3으로 설정하는 방법일 뿐이다.
+        flag = False # flag가 무엇인지에 따라 커널 크기를 1 또는 3으로 설정하는 방법
         # (1,3)[False] -> 1
         # (1,3)[True] -> 3
         if in_channels != 'S':
@@ -53,10 +53,26 @@ def make_layers(vgg16_cfg, extra_cfg, batch_norm=False):
     return nn.ModuleList(layers)
 
 
+
+
 class SSD300(nn.Module):
-    def __init__(self, init_weights=True):
+    def __init__(self, init_weights=True, num_class=20):
         super(SSD300, self).__init__()
         self.ssd = make_layers(vgg16_cfg, extra_cfg) # nn.ModuleList
+        self.num_defaults = [4, 6, 6, 6, 4, 4]
+        self.out_channels = [] # out channels of conf4_3, 7, 8_2, 9_2, 10_2, 11_2
+        self.loc_conv = [] # for bbox regression
+        self.cls_conv = [] # for classification
+        self.l2_norm = L2Norm(512, scale=20)
+        for i in [22, 34, 38, 42, 46, 50]:
+            self.out_channels.append(self.ssd[i].out_channels)
+
+        for nd, oc in zip(self.num_defaults, self.out_channels):
+            self.loc_conv.append(nn.Conv2d(oc, nd * 4, kernel_size=3, padding=1))
+            self.cls_conv.append(nn.Conv2d(oc, nd * num_class, kernel_size=3, padding=1))
+
+        self.loc_conv = nn.ModuleList(self.loc)
+        self.cls_conv = nn.ModuleList(self.conf)
 
         if init_weights:
             self._initialize_weights()
@@ -65,25 +81,34 @@ class SSD300(nn.Module):
         features = [] # features to use
         for i in range(23):
             x = self.ssd[i](x)
-        s = self.l2_norm(x)  # Conv4_3 feature
+        s = x
+        # conv4_3 L2 norm
+        norm = s.pow(2).sum(dim=1, keepdim=True).sqrt()  # (N, 1, 38, 38)
+        s = s / norm  # (N, 512, 38, 38)
+        s = s * self.rescale_factors  # (N, 512, 38, 38) out_ch=512
         features.append(s)
 
         # apply vgg up to fc7
         for i in range(23, 35):
             x = self.ssd[i](x)
-        features.append(x)
+        features.append(x) # Conv7 feature out_ch=1024
 
-        for k, v in enumerate(self.ssd[35:]):
-            if k in [3, 7, 11, 15]:
-                features.append(x)
+        # for k, v in enumerate(self.ssd[35:]):
+        #     if k in [3, 7, 11, 15]:
+        #         features.append(x)
+        # 아앗.. batch norm 할 경우 생각 x.... 나중에 고쳐볼게요...
+        for i in range(35, 51):
+            if i in [38, 42, 46, 50]:
+                x = self.ssd[i](x)
+                features.append(x) # out_ch 512, 256, 256, 256
 
         return tuple(features)
 
     def _initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu') # = He Initialization
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-# print(make_layers(vgg16_cfg, extra_cfg))
+print(make_layers(vgg16_cfg, extra_cfg)[5].out_channels)
