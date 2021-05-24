@@ -24,10 +24,9 @@ class VOCDataset(torch.utils.data.Dataset):
         self.transform = transform
         self.target_transform = target_transform
         if is_test:
-            image_sets_file = self.root / "ImageSets/Main/test.txt"
+            image_sets_file = self.root # "ImageSets/Main/test.txt"
         else:
-            image_sets_file = self.root / "ImageSets/Main/trainval.txt"
-        
+            image_sets_file = f"{self.root}/ImageSets/Main/trainval.txt"
         self.ids = VOCDataset._read_image_ids(image_sets_file)
         self.keep_difficult = keep_difficult
 
@@ -66,7 +65,7 @@ class VOCDataset(torch.utils.data.Dataset):
 
     
     def _get_annotation(self, image_id):
-        annotation_file = self.root / f"Annotations/{image_id}.xml"
+        annotation_file = f"{self.root}/Annotations/{image_id}.xml"
         objects = ET.parse(annotation_file).findall("object")
         boxes = []
         labels = []
@@ -93,18 +92,14 @@ class VOCDataset(torch.utils.data.Dataset):
                 np.array(is_difficult, dtype=np.uint8))
 
     def _read_image(self,image_id):
-        image_file = self.root / f"JPEGImages/{image_id}.jpg"
+        image_file = f"{self.root}/JPEGImages/{image_id}.jpg"
         image = Image.open(image_file).convert("RGB")
         image = np.array(image)
         return image
 
+if __name__ is '__main__':
+    train_dataset = VOCDataset('')
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                                batch_size=args.batch_size,
+                                                shuffle=True)
 
-train_dataset = VOCDataset()
-train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                            batch_size=args.batch_size,
-                                            shuffle=True)
-
-test_dataset = VOCDataset(is_test=True)
-test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                            batch_size=args.batch_size,
-                                            shuffle=True)
