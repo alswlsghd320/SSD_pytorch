@@ -27,7 +27,6 @@ class VOCDataset(torch.utils.data.Dataset):
             image_sets_file = self.root # "ImageSets/Main/test.txt"
         else:
             image_sets_file = f"{self.root}/ImageSets/Main/trainval.txt"
-        
         self.ids = VOCDataset._read_image_ids(image_sets_file)
         self.keep_difficult = keep_difficult
 
@@ -104,7 +103,3 @@ if __name__ is '__main__':
                                                 batch_size=args.batch_size,
                                                 shuffle=True)
 
-    test_dataset = VOCDataset(is_test=True)
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                                batch_size=args.batch_size,
-                                                shuffle=True)
