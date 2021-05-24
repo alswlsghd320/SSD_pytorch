@@ -13,9 +13,6 @@ class DefaultBox():
         self.sk_min = 0.2 #cfg['sk_min']
         self.sk_max = 0.9 #cfg['sk_max']
 
-        for v in self.variance:
-            if v <= 0:
-                raise ValueError('Variances must be greater than 0')
         if self.sk_min <= 0 or self.sk_max <= self.sk_min:
             raise ValueError('sk_min, sk_max must be grater than 0')
         # from k=1 to k=m+1=7
