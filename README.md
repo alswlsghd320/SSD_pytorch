@@ -1,4 +1,4 @@
-# SSD(Single Shot MultiBox Detector)_pytorch
+# SSD(Single Shot MultiBox Detector) in Pytorch
 
 ## Contributor
 
