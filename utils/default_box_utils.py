@@ -45,9 +45,12 @@ def assign_priors(gt_boxes, gt_labels, priors_boxes, iou_threshold=0.5):
         labels(num_priors): labels for priors
     """
     ious = iou(gt_boxes.unsqueeze(0), priors_boxes.unsqueeze(1)) # 모든 prior box들과 gt box 하나의 iou 계산해
-    # [[(gtbox0,prior0 iou), (gtbox1, prior0 iou), (gtbox2, prior0 iou), ... ]
-    # [(gtbox0,prior1 iou), (gtbox1, prior1 iou), (gtbox2, prior1 iou), ... ]...]
-
+    '''
+    ious:
+    [[(gtbox0,prior0 iou), (gtbox1, prior0 iou), (gtbox2, prior0 iou), ... ]
+    [(gtbox0,prior1 iou), (gtbox1, prior1 iou), (gtbox2, prior1 iou), ... ]...]
+    '''
+    
     best_target_per_prior, best_target_per_prior_index = ious.max(1)
     best_prior_per_target, best_prior_per_target_index = ious.max(0)
     #  to make sure every target has a prior assigned
