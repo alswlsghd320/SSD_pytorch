@@ -9,6 +9,21 @@ def cxcy_to_xyxy(cxcy):
     """
     return torch.cat([cxcy[..., :2] - (cxcy[..., 2:]/2),  cxcy[..., :2] + (cxcy[..., 2:]/2)], -1)
 
+def cxcy_to_gcxgcy(cxcy, priors_cxcy):
+    """
+    For the center coordinates, find the offset with respect to the prior box, and scale by the size of the prior box.
+    For the size coordinates, scale by the size of the prior box, and convert to the log-space.
+
+    In the model, we are predicting bounding box coordinates in this encoded form.
+
+    :param cxcy (n_priors, 4): bounding boxes in center-size coordinates
+    :param priors_cxcy (n_priors, 4): prior boxes with respect to which the encoding must be performed
+    :return: encoded bounding boxes, a tensor of size (n_priors, 4)
+    """
+
+    return torch.cat([(cxcy[:, :2] - priors_cxcy[:, :2]) / (priors_cxcy[:, 2:] / 10),  # g_c_x, g_c_y
+                      torch.log(cxcy[:, 2:] / priors_cxcy[:, 2:]) * 5], 1)  # g_w, g_h
+
 
 def iou(gt_boxes, predicted_boxes):
     """Return intersection-over-union (Jaccard index) of boxes.
@@ -32,6 +47,7 @@ def iou(gt_boxes, predicted_boxes):
     pred_area = predicted_boxes[..., 2] * predicted_boxes[..., 3]
     return overlap_area / (gt_area + pred_area - overlap_area + 1e-5)
 
+
 def assign_priors(gt_boxes, gt_labels, priors_boxes, iou_threshold=0.5):
     """
     Assign ground truth boxes and targets to priors
@@ -50,7 +66,7 @@ def assign_priors(gt_boxes, gt_labels, priors_boxes, iou_threshold=0.5):
     [[(gtbox0,prior0 iou), (gtbox1, prior0 iou), (gtbox2, prior0 iou), ... ]
     [(gtbox0,prior1 iou), (gtbox1, prior1 iou), (gtbox2, prior1 iou), ... ]...]
     '''
-    
+
     best_target_per_prior, best_target_per_prior_index = ious.max(1)
     best_prior_per_target, best_prior_per_target_index = ious.max(0)
     #  to make sure every target has a prior assigned
