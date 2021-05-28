@@ -24,8 +24,8 @@ def cxcy_to_gcxgcy(cxcy, priors_cxcy):
     :return: encoded bounding boxes, a tensor of size (n_priors, 4)
     """
 
-    return torch.cat([(cxcy[:, :2] - priors_cxcy[:, :2]) / (priors_cxcy[:, 2:] / 10),  # g_c_x, g_c_y
-                      torch.log(cxcy[:, 2:] / priors_cxcy[:, 2:]) * 5], 1)  # g_w, g_h
+    return torch.cat([(cxcy[:, :2] - priors_cxcy[:, :2]) / (priors_cxcy[:, 2:]),  # g_c_x, g_c_y
+                      torch.log(cxcy[:, 2:] / priors_cxcy[:, 2:])], 1)  # g_w, g_h
 
 
 def iou(gt_boxes, predicted_boxes):
