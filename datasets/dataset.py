@@ -1,4 +1,6 @@
+from configs import ssd300 as cfg
 import os
+import cv2
 
 import xml.etree.ElementTree as ET
 import pathlib
@@ -6,18 +8,8 @@ import numpy as np
 from PIL import Image
 import torch
 
-from torch.utils.data import Dataset, DataLoader, TensorDataset
-import torchvision.transforms as standard_transforms
 
-
-class VOCDataset(torch.utils.data.Dataset):
-
-    class_names = ('__background__',
-                   'aeroplane', 'bicycle', 'bird', 'boat',
-                   'bottle', 'bus', 'car', 'cat', 'chair',
-                   'cow', 'diningtable', 'dog', 'horse',
-                   'motorbike', 'person', 'pottedplant',
-                   'sheep', 'sofa', 'train', 'tvmonitor')
+class VOCDataset():
 
     def __init__(self, root, is_test=False, transform=None, target_transform=None, keep_difficult=False):
         self.root = pathlib.Path(root)
@@ -31,7 +23,7 @@ class VOCDataset(torch.utils.data.Dataset):
         self.ids = VOCDataset._read_image_ids(image_sets_file)
         self.keep_difficult = keep_difficult
 
-        self.class_dict = {class_name: i for i, class_name in enumerate(self.class_names)}
+        self.class_dict = {class_name: i for i, class_name in enumerate(cfg.VOC_CLASSES)}
 
 
     def __getitem__(self, index):
@@ -45,7 +37,7 @@ class VOCDataset(torch.utils.data.Dataset):
             image, boxes, labels = self.transform(image, boxes, labels)
         if self.target_transform:
             boxes, labels = self.target_transform(boxes, labels)
-        return image, boxes, labels
+        return image, boxes, labels #image(RGB), boxes = [x1,y1,x2,y2], background label is 0
         
 
     def __len__(self):
@@ -62,8 +54,6 @@ class VOCDataset(torch.utils.data.Dataset):
     def get_annotation(self, index):
         image_id = self.ids[index]
         return image_id, self._get_annotation(image_id)
-
-
     
     def _get_annotation(self, image_id):
         annotation_file = self.root / f"Annotations/{image_id}.xml"
@@ -73,7 +63,7 @@ class VOCDataset(torch.utils.data.Dataset):
         is_difficult = []
         for object in objects:
             class_name = object.find('name').text.lower().strip()
-            # we're only concerned with clases in our list
+            # we're only concerned with classes in our list
             if class_name in self.class_dict:
                 bbox = object.find('bndbox')
 
@@ -92,19 +82,35 @@ class VOCDataset(torch.utils.data.Dataset):
                 np.array(labels, dtype=np.int64),
                 np.array(is_difficult, dtype=np.uint8))
 
+    def pull_item(self, index):
+        img_id = self.ids[index]
+
+        target = ET.parse(self._annopath % img_id).getroot()
+        img = cv2.imread(self._imgpath % img_id)
+        height, width, channels = img.shape
+
+        if self.target_transform is not None:
+            target = self.target_transform(target, width, height)
+
+        if self.transform is not None:
+            target = np.array(target)
+            img, boxes, labels = self.transform(
+                img, target[:, :4], target[:, 4])
+            # to rgb
+            img = img[:, :, (2, 1, 0)]
+            # img = img.transpose(2, 0, 1)
+            target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
+        return torch.from_numpy(img).permute(2, 0, 1), target, height, width
+        # return torch.from_numpy(img), target, height, width
+
     def _read_image(self,image_id):
         image_file = self.root / f"JPEGImages/{image_id}.jpg"
         image = Image.open(image_file).convert("RGB")
         image = np.array(image)
         return image
 
-
-train_dataset = VOCDataset()
-train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                            batch_size=args.batch_size,
-                                            shuffle=True)
-
-test_dataset = VOCDataset(is_test=True)
-test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                            batch_size=args.batch_size,
-                                            shuffle=True)
+if __name__ is '__main__':
+    train_dataset = VOCDataset(cfg.VOC_ROOT)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                               batch_size=cfg.BATCH_SIZE,
+                                               shuffle=True)
