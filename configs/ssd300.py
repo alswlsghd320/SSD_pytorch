@@ -7,7 +7,7 @@ update = 2021-5-14
 
 #[Train]
 HOME = os.path.expanduser("~")
-VOC_ROOT = os.path.join(HOME, "data/VOCdevkit/")
+VOC_ROOT = os.path.join(HOME, "/datasets/VOCdevkit/")
 BACKBONE = 'VGG16'
 VOC_CLASSES = ('__background__',
                'aeroplane', 'bicycle', 'bird', 'boat',

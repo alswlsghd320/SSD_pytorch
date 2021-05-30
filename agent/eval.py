@@ -1,5 +1,5 @@
 from __future__ import print_function
-from datasets.dataset import VOCDataset
+from datasets import dataset
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -7,7 +7,7 @@ from torch.autograd import Variable
 from datasets.transforms import VOCAnnotationTransform, BaseTransform
 from configs.ssd300 import VOC_CLASSES as labelmap 
 import torch.utils.data as data
-from models import SSD300
+from models.ssd300 import SSD300
 
 import sys
 import os
@@ -396,7 +396,7 @@ if __name__ == '__main__':
     net.eval()
     print('Finished loading model!')
     # load data
-    dataset = VOCDataset(args.voc_root,
+    dataset = dataset.VOCDataset(args.voc_root,
                            BaseTransform(300, dataset_mean),
                            VOCAnnotationTransform())
     if args.cuda:
@@ -404,5 +404,5 @@ if __name__ == '__main__':
         cudnn.benchmark = True
     # evaluation
     test_net(args.save_folder, net, args.cuda, dataset,
-             BaseTransform(net.size, dataset_mean), args.top_k, 300,
+             BaseTransform(net.size), args.top_k, 300,
              thresh=args.confidence_threshold)

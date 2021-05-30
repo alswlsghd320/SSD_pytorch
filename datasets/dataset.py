@@ -12,19 +12,17 @@ import torch
 class VOCDataset():
 
     def __init__(self, root, is_test=False, transform=None, target_transform=None, keep_difficult=False):
-        self.root = pathlib.Path(root)
+        self.root = pathlib.Path(cfg.VOC_ROOT)
         self.transform = transform
         self.target_transform = target_transform
         if is_test:
-            image_sets_file = self.root / "ImageSets/Main/test.txt"
+            image_sets_file = f"{self.root}/ImageSets/Main/test.txt"
         else:
-            image_sets_file = self.root / "ImageSets/Main/trainval.txt"
-        
+            image_sets_file = f"{self.root}/ImageSets/Main/trainval.txt"
         self.ids = VOCDataset._read_image_ids(image_sets_file)
         self.keep_difficult = keep_difficult
 
         self.class_dict = {class_name: i for i, class_name in enumerate(cfg.VOC_CLASSES)}
-
 
     def __getitem__(self, index):
         image_id = self.ids[index]
@@ -37,8 +35,7 @@ class VOCDataset():
             image, boxes, labels = self.transform(image, boxes, labels)
         if self.target_transform:
             boxes, labels = self.target_transform(boxes, labels)
-        return image, boxes, labels #image(RGB), boxes = [x1,y1,x2,y2], background label is 0
-        
+        return image, boxes, labels  # image(RGB), boxes = [x1,y1,x2,y2], background label is 0
 
     def __len__(self):
         return len(self.ids)
@@ -54,9 +51,9 @@ class VOCDataset():
     def get_annotation(self, index):
         image_id = self.ids[index]
         return image_id, self._get_annotation(image_id)
-    
+
     def _get_annotation(self, image_id):
-        annotation_file = self.root / f"Annotations/{image_id}.xml"
+        annotation_file = f"{self.root}/Annotations/{image_id}.xml"
         objects = ET.parse(annotation_file).findall("object")
         boxes = []
         labels = []
@@ -78,7 +75,7 @@ class VOCDataset():
                 is_difficult_str = object.find('difficult').text
                 is_difficult.append(int(is_difficult_str) if is_difficult_str else 0)
 
-        return (np.array(boxes, dtype=np.float32),
+        return (np.array(boxes, dtype=np.float32),  # (object 수, 4) x1,y1,x2,y2
                 np.array(labels, dtype=np.int64),
                 np.array(is_difficult, dtype=np.uint8))
 
@@ -103,11 +100,12 @@ class VOCDataset():
         return torch.from_numpy(img).permute(2, 0, 1), target, height, width
         # return torch.from_numpy(img), target, height, width
 
-    def _read_image(self,image_id):
-        image_file = self.root / f"JPEGImages/{image_id}.jpg"
+    def _read_image(self, image_id):
+        image_file = f"{self.root}/JPEGImages/{image_id}.jpg"
         image = Image.open(image_file).convert("RGB")
         image = np.array(image)
         return image
+
 
 if __name__ is '__main__':
     train_dataset = VOCDataset(cfg.VOC_ROOT)

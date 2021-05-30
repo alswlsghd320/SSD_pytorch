@@ -28,5 +28,9 @@
   "async_loading": true,
 
   "data_mode": "imgs",
-  "data_folder": "./data/example"
+  "data_folder": "./data/example",
+
+  "cwd": "${fileDirname}",
+  "env": {"PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
+  }
 }

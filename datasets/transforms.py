@@ -1,8 +1,9 @@
-from configs.ssd300 import VOC_CLASSES
+from configs import ssd300 as cfg
 
 import torch
 import cv2
 import numpy as np
+import torchvision.transforms as transforms
 
 
 def detection_collate(batch):
@@ -25,16 +26,15 @@ def detection_collate(batch):
 
 
 def base_transform(image, size, mean):
-    x = cv2.resize(image, (size, size)).astype(np.float32)
-    x -= mean
-    x = x.astype(np.float32)
-    return x
-
+    transform = transforms.Compose([
+        transforms.Resize(size),
+        transforms.ToTensor()
+    ])
+    return transform
 
 class BaseTransform:
     def __init__(self, size, mean):
         self.size = size
-        self.mean = np.array(mean, dtype=np.float32)
 
     def __call__(self, image, boxes=None, labels=None):
         return base_transform(image, self.size, self.mean), boxes, labels
@@ -54,7 +54,7 @@ class VOCAnnotationTransform(object):
 
     def __init__(self, class_to_ind=None, keep_difficult=False):
         self.class_to_ind = class_to_ind or dict(
-            zip(VOC_CLASSES, range(len(VOC_CLASSES))))
+            zip(cfg.VOC_CLASSES, range(len(cfg.VOC_CLASSES))))
         self.keep_difficult = keep_difficult
 
     def __call__(self, target, width, height):
