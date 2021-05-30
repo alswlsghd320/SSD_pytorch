@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from utils.default_box_utils import hard_negative_mining
+from utils.default_box_utils import hard_negative_mining, cxcy_to_gcxgcy, DefaultBox
 
 class MultiBoxLoss(nn.Module):
     """
@@ -17,11 +17,11 @@ class MultiBoxLoss(nn.Module):
         super(MultiBoxLoss, self).__init__()
         self.neg_pos_ratio = neg_pos_ratio
         self.alpha = alpha
+        self.default_box = DefaultBox().forward()
 
     def forward(self, predicted_scores, predicted_locs, gt_labels, gt_locations):
         '''
         forward propagation
-
         :param predicted_scores: class scores for each of the encoded locations/boxes, a tensor of dimensions (N, 8732, n_classes)
         :param predicted_locs: predicted locations/boxes w.r.t the 8732 prior boxes, a tensor of dimensions (N, 8732, 4)
         :param gt_labels: true object labels, a list of N(batch size) tensors, (batch_size, num_priors)
@@ -38,19 +38,12 @@ class MultiBoxLoss(nn.Module):
         # hard negative mining 처리 완료된 predicted scores에서 crossentropy
         cls_loss = F.cross_entropy(predicted_scores.contiguous().view(-1, num_classes), gt_labels[mask], reduction='sum')
 
+        true_locs = cxcy_to_gcxgcy(predicted_locs, self.default_box)  # (8732, 4), (gcx, gcy, gw, gh)
         pos_mask = gt_labels > 0
         # positive인 box들만(BG아닌 box들) 사용하는게 맞음
-        predicted_locs = predicted_locs[pos_mask, :]
+        true_locs = true_locs[pos_mask, :]
+
         gt_locations = gt_locations[pos_mask, :]
-        loc_loss = F.smooth_l1_loss(predicted_locs.view(-1, 4), gt_locations.view(-1, 4), reduction='sum')
+        loc_loss = F.smooth_l1_loss(true_locs.view(-1, 4), gt_locations.view(-1, 4), reduction='sum')
         num_pos = gt_locations.size(0)
         return (cls_loss + self.alpha * loc_loss)/num_pos
-
-if __name__ == '__main__':
-    p_s = torch.rand((2, 8732, 21))
-    label = torch.randint(0, 21, (2, 8732))
-    print(label)
-    locs = torch.rand((2, 8732, 4))
-    gt_locs = torch.rand((2, 8732, 4))
-    m = MultiBoxLoss()
-    m.forward(p_s, locs, label, gt_locs)

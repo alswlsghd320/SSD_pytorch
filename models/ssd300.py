@@ -133,12 +133,3 @@ class SSD300(nn.Module):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-
-
-# if __name__ == '__main__':
-#     # (N, 3, 300, 300)
-#     x = torch.zeros((1, 3, 300, 300), dtype=torch.float)
-#
-#     print(make_layers(vgg16_cfg, extra_cfg, batch_norm=True))
-#     ssd = SSD300()
-#     ssd.forward(x)
