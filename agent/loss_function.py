@@ -46,11 +46,11 @@ class MultiBoxLoss(nn.Module):
         num_pos = gt_locations.size(0)
         return (cls_loss + self.alpha * loc_loss)/num_pos
 
-# if __name__ == '__main__':
-#     p_s = torch.rand((2, 8732, 21))
-#     label = torch.randint(0, 21, (2, 8732))
-#     print(label)
-#     locs = torch.rand((2, 8732, 4))
-#     gt_locs = torch.rand((2, 8732, 4))
-#     m = MultiBoxLoss()
-#     m.forward(p_s, locs, label, gt_locs)
+if __name__ == '__main__':
+    p_s = torch.rand((2, 8732, 21))
+    label = torch.randint(0, 21, (2, 8732))
+    print(label)
+    locs = torch.rand((2, 8732, 4))
+    gt_locs = torch.rand((2, 8732, 4))
+    m = MultiBoxLoss()
+    m.forward(p_s, locs, label, gt_locs)
