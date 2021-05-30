@@ -3,6 +3,7 @@ import numpy as np
 import torch.nn.functional as F
 import torch
 
+
 vgg16_cfg = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M', 512, 512, 512]
 extra_cfg = [256, 'S', 512, 128, 'S', 256, 128, 256, 128, 256]
 

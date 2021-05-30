@@ -9,7 +9,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torchvision.transforms as standard_transforms
 
-
 class VOCDataset(torch.utils.data.Dataset):
 
     class_names = ('__background__',
@@ -99,7 +98,4 @@ class VOCDataset(torch.utils.data.Dataset):
 
 if __name__ is '__main__':
     train_dataset = VOCDataset('')
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                                batch_size=args.batch_size,
-                                                shuffle=True)
 

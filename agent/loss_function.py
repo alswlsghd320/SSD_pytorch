@@ -22,7 +22,6 @@ class MultiBoxLoss(nn.Module):
     def forward(self, predicted_scores, predicted_locs, gt_labels, gt_locations):
         '''
         forward propagation
-
         :param predicted_scores: class scores for each of the encoded locations/boxes, a tensor of dimensions (N, 8732, n_classes)
         :param predicted_locs: predicted locations/boxes w.r.t the 8732 prior boxes, a tensor of dimensions (N, 8732, 4)
         :param gt_labels: true object labels, a list of N(batch size) tensors, (batch_size, num_priors)
@@ -48,4 +47,3 @@ class MultiBoxLoss(nn.Module):
         loc_loss = F.smooth_l1_loss(true_locs.view(-1, 4), gt_locations.view(-1, 4), reduction='sum')
         num_pos = gt_locations.size(0)
         return (cls_loss + self.alpha * loc_loss)/num_pos
-
