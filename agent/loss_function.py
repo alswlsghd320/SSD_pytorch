@@ -22,7 +22,10 @@ class MultiBoxLoss(nn.Module):
     def forward(self, predicted_scores, predicted_locs, gt_labels, gt_locations):
         '''
         forward propagation
+<<<<<<< HEAD
 
+=======
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
         :param predicted_scores: class scores for each of the encoded locations/boxes, a tensor of dimensions (N, 8732, n_classes)
         :param predicted_locs: predicted locations/boxes w.r.t the 8732 prior boxes, a tensor of dimensions (N, 8732, 4)
         :param gt_labels: true object labels, a list of N(batch size) tensors, (batch_size, num_priors)
@@ -42,10 +45,18 @@ class MultiBoxLoss(nn.Module):
         true_locs = cxcy_to_gcxgcy(predicted_locs, self.default_box)  # (8732, 4), (gcx, gcy, gw, gh)
         pos_mask = gt_labels > 0
         # positive인 box들만(BG아닌 box들) 사용하는게 맞음
+<<<<<<< HEAD
         true_locs = predicted_locs[pos_mask, :]
+=======
+        true_locs = true_locs[pos_mask, :]
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
 
         gt_locations = gt_locations[pos_mask, :]
         loc_loss = F.smooth_l1_loss(true_locs.view(-1, 4), gt_locations.view(-1, 4), reduction='sum')
         num_pos = gt_locations.size(0)
+<<<<<<< HEAD
         return (cls_loss + self.alpha * loc_loss)/num_pos
 
+=======
+        return (cls_loss + self.alpha * loc_loss)/num_pos
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d

@@ -9,6 +9,7 @@ import torch
     allowing the network to predict high scores for multiple overlapping default boxes 
     rather than requiring it to pick only the one with maximum overlap.
 '''
+<<<<<<< HEAD
 # def intersect(box_1, box_2):
 #     '''
 #
@@ -96,6 +97,52 @@ def jaccard(box_a, box_b):
     union = area_a + area_b - inter
     return inter / union  # [A,B]
 
+=======
+def intersect(box_1, box_2):
+    '''
+
+    :param box_1: [num_objects, 4(xmin, ymin, xmax, ymax)]
+    :param box_2: [num_priors, 4]
+    :return: [num_objects, num_priors]
+    '''
+    A = box_1.size(0) #num_objects
+    B = box_2.size(0) #num_priors
+    min_xy = torch.max(box_1[:, :2].unsqueeze(1).expand(A, B, 2),
+                       box_2[:, :2].unsqueeze(0).expand(A, B, 2)) # [A, B, 2(x_min, y_min)]
+
+    max_xy = torch.min(box_1[:, 2:].unsqueeze(1).expand(A, B, 2),
+                       box_2[:, 2:].unsqueeze(0).expand(A, B, 2)) # [A, B, 2(x_max, y_max)]
+
+    inter = torch.clamp((max_xy - min_xy), min=0)  # [A, B, 2(x_max - x_min, y_max - y_min)]
+
+    return inter[:, :, 0] * inter[:, :, 1] # [A, B] (x_max - x_min) * (y_max - y_min)
+
+def IOU(box_1, box_2):
+    '''
+
+    :param box_1: Ground truth bounding box ; [num_objects, 4(xmin, ymin, xmax, ymax)]
+    :param box_2: Prior boxes ; [num_priors, 4]
+    :return: IOU(A, B) = A ∩ B / A ∪ B
+                       = A ∩ B / (A + B - A ∩ B) ; [box_1.shape[0], box_2.shape[0]]
+    '''
+    inter = intersect(box_1, box_2)
+    area_a = ((box_1[:, 2] - box_1[:, 0]) *
+              (box_1[:, 3] - box_1[:, 1])).unsqueeze(1).expand_as(inter)  # [A,B]
+    area_b = ((box_2[:, 2] - box_2[:, 0]) *
+              (box_2[:, 3] - box_2[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
+    union = area_a + area_b - inter
+    return inter / union  # [A,B]
+
+def convert_points(boxes, mode=None):
+    if mode == 'center2pts':
+        return torch.cat((boxes[:, :2] - boxes[:, 2:] / 2,  # xmin, ymin
+                          boxes[:, :2] + boxes[:, 2:] / 2), 1)  # xmax, ymax
+    elif mode == 'pts2center':
+        return torch.cat((boxes[:, 2:] + boxes[:, :2]) / 2,  # cx, cy
+                         boxes[:, 2:] - boxes[:, :2], 1)  # w, h
+    else:
+        return boxes
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
 
 def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     """Match each prior box with the ground truth box of the highest jaccard
@@ -115,9 +162,15 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         The matched indices corresponding to 1)location and 2)confidence preds.
     """
     # jaccard index
+<<<<<<< HEAD
     overlaps = jaccard(
         truths,
         point_form(priors)
+=======
+    overlaps = IOU(
+        truths,
+        convert_points(priors, 'center2pts')
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
     )
     # (Bipartite Matching)
     # [1,num_objects] best prior for each ground truth
@@ -186,6 +239,10 @@ def decode(loc, priors, variances):
     boxes[:, 2:] += boxes[:, :2]
     return boxes
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
 # Original author: Francisco Massa:
 # https://github.com/fmassa/object-detection.torch
 # Ported to PyTorch by Max deGroot (02/01/2017)
@@ -253,4 +310,8 @@ def nms(boxes, scores, overlap=0.5, top_k=200):
         IoU = inter/union  # store result in iou
         # keep only elements with an IoU <= overlap
         idx = idx[IoU.le(overlap)]
+<<<<<<< HEAD
+=======
+
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
     return keep, count

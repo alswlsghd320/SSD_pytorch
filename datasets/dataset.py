@@ -9,14 +9,29 @@ from PIL import Image
 import torch
 
 
+<<<<<<< HEAD
 class VOCDataset():
+=======
+class VOCDataset(torch.utils.data.Dataset):
+
+    class_names = ('__background__',
+                   'aeroplane', 'bicycle', 'bird', 'boat',
+                   'bottle', 'bus', 'car', 'cat', 'chair',
+                   'cow', 'diningtable', 'dog', 'horse',
+                   'motorbike', 'person', 'pottedplant',
+                   'sheep', 'sofa', 'train', 'tvmonitor')
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
 
     def __init__(self, root, is_test=False, transform=None, target_transform=None, keep_difficult=False):
         self.root = pathlib.Path(cfg.VOC_ROOT)
         self.transform = transform
         self.target_transform = target_transform
         if is_test:
+<<<<<<< HEAD
             image_sets_file = f"{self.root}/ImageSets/Main/test.txt"
+=======
+            image_sets_file = self.root # "ImageSets/Main/test.txt"
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
         else:
             image_sets_file = f"{self.root}/ImageSets/Main/trainval.txt"
         self.ids = VOCDataset._read_image_ids(image_sets_file)
@@ -79,6 +94,7 @@ class VOCDataset():
                 np.array(labels, dtype=np.int64),
                 np.array(is_difficult, dtype=np.uint8))
 
+<<<<<<< HEAD
     def pull_item(self, index):
         img_id = self.ids[index]
 
@@ -101,14 +117,22 @@ class VOCDataset():
         # return torch.from_numpy(img), target, height, width
 
     def _read_image(self, image_id):
+=======
+    def _read_image(self,image_id):
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
         image_file = f"{self.root}/JPEGImages/{image_id}.jpg"
         image = Image.open(image_file).convert("RGB")
         image = np.array(image)
         return image
 
+if __name__ is '__main__':
+    train_dataset = VOCDataset('')
 
+<<<<<<< HEAD
 if __name__ is '__main__':
     train_dataset = VOCDataset(cfg.VOC_ROOT)
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=cfg.BATCH_SIZE,
                                                shuffle=True)
+=======
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d

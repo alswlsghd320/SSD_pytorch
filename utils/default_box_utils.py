@@ -108,7 +108,11 @@ class DefaultBox():
                         w = self.sk[k] * sqrt(ar)
                         h = self.sk[k] / sqrt(ar)
                         offset.append([cx, cy, w, h])
+<<<<<<< HEAD
         return torch.Tensor(offset)
+=======
+        return torch.Tensor(offset) #[num_db, 4]
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
 
     def compute_sk(self, k):
         if k == 1:

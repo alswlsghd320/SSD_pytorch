@@ -3,6 +3,10 @@ import numpy as np
 import torch.nn.functional as F
 import torch
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
 vgg16_cfg = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M', 512, 512, 512]
 extra_cfg = [256, 'S', 512, 128, 'S', 256, 128, 256, 128, 256]
 
@@ -132,6 +136,7 @@ class SSD300(nn.Module):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
+<<<<<<< HEAD
 
 
 # if __name__ == '__main__':
@@ -141,3 +146,5 @@ class SSD300(nn.Module):
 #     print(make_layers(vgg16_cfg, extra_cfg, batch_norm=True))
 #     ssd = SSD300()
 #     ssd.forward(x)
+=======
+>>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
