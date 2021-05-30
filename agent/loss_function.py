@@ -10,14 +10,14 @@ class MultiBoxLoss(nn.Module):
     (1) a localization loss for the predicted locations of the boxes (smoothL1), and
     (2) a confidence loss for the predicted class scores. (softmax, cross-entropy)
     """
-    def __init__(self, neg_pos_ratio=3, alpha=1.):
+    def __init__(self, neg_pos_ratio=3, alpha=1., cfg):
         '''
         :param neg_pos_ratio: number of positive samples : number of negative samples
         '''
         super(MultiBoxLoss, self).__init__()
         self.neg_pos_ratio = neg_pos_ratio
         self.alpha = alpha
-        self.default_box = DefaultBox().forward()
+        self.default_box = DefaultBox(cfg).forward()
 
     def forward(self, predicted_scores, predicted_locs, gt_labels, gt_locations):
         '''
@@ -42,7 +42,7 @@ class MultiBoxLoss(nn.Module):
         true_locs = cxcy_to_gcxgcy(predicted_locs, self.default_box)  # (8732, 4), (gcx, gcy, gw, gh)
         pos_mask = gt_labels > 0
         # positive인 box들만(BG아닌 box들) 사용하는게 맞음
-        true_locs = predicted_locs[pos_mask, :]
+        true_locs = true_locs[pos_mask, :]
 
         gt_locations = gt_locations[pos_mask, :]
         loc_loss = F.smooth_l1_loss(true_locs.view(-1, 4), gt_locations.view(-1, 4), reduction='sum')
