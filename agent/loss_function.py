@@ -10,14 +10,14 @@ class MultiBoxLoss(nn.Module):
     (1) a localization loss for the predicted locations of the boxes (smoothL1), and
     (2) a confidence loss for the predicted class scores. (softmax, cross-entropy)
     """
-    def __init__(self, neg_pos_ratio=3, alpha=1., cfg):
+    def __init__(self, neg_pos_ratio=3, alpha=1.):
         '''
         :param neg_pos_ratio: number of positive samples : number of negative samples
         '''
         super(MultiBoxLoss, self).__init__()
         self.neg_pos_ratio = neg_pos_ratio
         self.alpha = alpha
-        self.default_box = DefaultBox(cfg).forward()
+        self.default_box = DefaultBox().forward()
 
     def forward(self, predicted_scores, predicted_locs, gt_labels, gt_locations):
         '''
