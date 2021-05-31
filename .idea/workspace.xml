@@ -2,21 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1fb4157d-34af-4f3f-939e-f4ccf75841b5" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/agent/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/configs/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/datasets/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent/eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/agent/eval.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent/loss_function.py" beforeDir="false" afterPath="$PROJECT_DIR$/agent/loss_function.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/configs/ssd300.json" beforeDir="false" afterPath="$PROJECT_DIR$/configs/ssd300.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/configs/ssd300.py" beforeDir="false" afterPath="$PROJECT_DIR$/configs/ssd300.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasets/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/dataset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasets/transforms.py" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/transforms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/ssd300.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/ssd300.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/default_box_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/default_box_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/matching_strategy.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/matching_strategy.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
