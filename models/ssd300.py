@@ -107,24 +107,26 @@ class SSD300(nn.Module):
             if i in [feat8_2_idx, feat8_2_idx+4, feat8_2_idx+8, feat8_2_idx+12]:
                 features.append(x) # out_ch 512, 256, 256, 256
 
-        classes_scores= []
+        classes_scores= None
+        locs = None
         batch_size = self.cls_conv[0](features[0]).size(0)
+
         for i, feature in enumerate(features):
+            # Classes_scores
             f = self.cls_conv[i](feature)
             f = f.permute(0, 2, 3, 1).contiguous()  # (N, 38, 38, 16), to match prior-box order (after .view())
             # (.contiguous() ensures it is stored in a contiguous chunk of memory, needed for .view() below)
             f = f.view(batch_size, -1, self.num_class)  # (N, 5776, 4), there are a total 5776 boxes on this feature map
-            classes_scores.append(f)
+            classes_scores = f if classes_scores is None else torch.cat([classes_scores, f], dim=1)
 
-        locs = []
-        for i, feature in enumerate(features):
+            # Localization_scores
             l = self.loc_conv[i](feature)  # (N, 16, 38, 38)
             l = l.permute(0, 2, 3, 1).contiguous()  # (N, 38, 38, 16), to match prior-box order (after .view())
             # (.contiguous() ensures it is stored in a contiguous chunk of memory, needed for .view() below)
             l = l.view(batch_size, -1, 4)  # (N, 5776, 4), there are a total 5776 boxes on this feature map
-            locs.append(l)
+            locs = l if locs is None else torch.cat([locs, l], dim=1)
 
-        return locs, classes_scores
+        return locs, classes_scores # ([1, 8732(=num_defaults), 4], [1, 8732(=num_defaults), num_classes]
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -133,12 +135,3 @@ class SSD300(nn.Module):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-
-
-# if __name__ == '__main__':
-#     # (N, 3, 300, 300)
-#     x = torch.zeros((1, 3, 300, 300), dtype=torch.float)
-#
-#     print(make_layers(vgg16_cfg, extra_cfg, batch_norm=True))
-#     ssd = SSD300()
-#     ssd.forward(x)
