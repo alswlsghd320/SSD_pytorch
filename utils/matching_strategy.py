@@ -2,105 +2,13 @@ import torch
 
 '''
 1. It needs to determine which default boxes correspond to a ground truth detection.
-
 2. First, using Jaccard overlap,  they match DB to any GT which is satisfied with ￼
-
 3. This simplifies the learning problem, 
     allowing the network to predict high scores for multiple overlapping default boxes 
     rather than requiring it to pick only the one with maximum overlap.
 '''
-<<<<<<< HEAD
-# def intersect(box_1, box_2):
-#     '''
-#
-#     :param box_1: [num_objects, 4(xmin, ymin, xmax, ymax)]
-#     :param box_2: [num_priors, 4]
-#     :return:
-#     '''
-#     pass
-#
-# def IOU(box_1, box_2):
-#     '''
-#
-#     :param box_1: Ground truth bounding box ; [num_objects, 4(xmin, ymin, xmax, ymax)]
-#     :param box_2: Prior boxes ; [num_priors, 4]
-#     :return: IOU(A, B) = A ∩ B / A ∪ B
-#                        = A ∩ B / (area(A) + area(B) - A ∩ B) ;[box_1.shape[0], box_2.shape[0]]
-#     '''
-#     pass
-
-import torch
-
-
-def point_form(boxes):
-    """ Convert prior_boxes to (xmin, ymin, xmax, ymax)
-    representation for comparison to point form ground truth data.
-    Args:
-        boxes: (tensor) center-size default boxes from priorbox layers.
-    Return:
-        boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
-    """
-    return torch.cat((boxes[:, :2] - boxes[:, 2:]/2,     # xmin, ymin
-                     boxes[:, :2] + boxes[:, 2:]/2), 1)  # xmax, ymax
-
-
-def center_size(boxes):
-    """ Convert prior_boxes to (cx, cy, w, h)
-    representation for comparison to center-size form ground truth data.
-    Args:
-        boxes: (tensor) point_form boxes
-    Return:
-        boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
-    """
-    return torch.cat((boxes[:, 2:] + boxes[:, :2])/2,  # cx, cy
-                     boxes[:, 2:] - boxes[:, :2], 1)  # w, h
-
-
-def intersect(box_a, box_b):
-    """ We resize both tensors to [A,B,2] without new malloc:
-    [A,2] -> [A,1,2] -> [A,B,2]
-    [B,2] -> [1,B,2] -> [A,B,2]
-    Then we compute the area of intersect between box_a and box_b.
-    Args:
-      box_a: (tensor) bounding boxes, Shape: [A,4].
-      box_b: (tensor) bounding boxes, Shape: [B,4].
-    Return:
-      (tensor) intersection area, Shape: [A,B].
-    """
-    A = box_a.size(0)
-    B = box_b.size(0)
-    max_xy = torch.min(box_a[:, 2:].unsqueeze(1).expand(A, B, 2),
-                       box_b[:, 2:].unsqueeze(0).expand(A, B, 2))
-    min_xy = torch.max(box_a[:, :2].unsqueeze(1).expand(A, B, 2),
-                       box_b[:, :2].unsqueeze(0).expand(A, B, 2))
-    inter = torch.clamp((max_xy - min_xy), min=0)
-    return inter[:, :, 0] * inter[:, :, 1]
-
-
-def jaccard(box_a, box_b):
-    """Compute the jaccard overlap of two sets of boxes.  The jaccard overlap
-    is simply the intersection over union of two boxes.  Here we operate on
-    ground truth boxes and default boxes.
-    E.g.:
-        A ∩ B / A ∪ B = A ∩ B / (area(A) + area(B) - A ∩ B)
-    Args:
-        box_a: (tensor) Ground truth bounding boxes, Shape: [num_objects,4]
-        box_b: (tensor) Prior boxes from priorbox layers, Shape: [num_priors,4]
-    Return:
-        jaccard overlap: (tensor) Shape: [box_a.size(0), box_b.size(0)]
-    """
-    inter = intersect(box_a, box_b)
-    area_a = ((box_a[:, 2]-box_a[:, 0]) *
-              (box_a[:, 3]-box_a[:, 1])).unsqueeze(1).expand_as(inter)  # [A,B]
-    area_b = ((box_b[:, 2]-box_b[:, 0]) *
-              (box_b[:, 3]-box_b[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
-    union = area_a + area_b - inter
-    return inter / union  # [A,B]
-
-=======
 def intersect(box_1, box_2):
     '''
-
     :param box_1: [num_objects, 4(xmin, ymin, xmax, ymax)]
     :param box_2: [num_priors, 4]
     :return: [num_objects, num_priors]
@@ -119,7 +27,6 @@ def intersect(box_1, box_2):
 
 def IOU(box_1, box_2):
     '''
-
     :param box_1: Ground truth bounding box ; [num_objects, 4(xmin, ymin, xmax, ymax)]
     :param box_2: Prior boxes ; [num_priors, 4]
     :return: IOU(A, B) = A ∩ B / A ∪ B
@@ -142,7 +49,6 @@ def convert_points(boxes, mode=None):
                          boxes[:, 2:] - boxes[:, :2], 1)  # w, h
     else:
         return boxes
->>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
 
 def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     """Match each prior box with the ground truth box of the highest jaccard
@@ -162,15 +68,9 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         The matched indices corresponding to 1)location and 2)confidence preds.
     """
     # jaccard index
-<<<<<<< HEAD
-    overlaps = jaccard(
-        truths,
-        point_form(priors)
-=======
     overlaps = IOU(
         truths,
         convert_points(priors, 'center2pts')
->>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
     )
     # (Bipartite Matching)
     # [1,num_objects] best prior for each ground truth
@@ -239,10 +139,7 @@ def decode(loc, priors, variances):
     boxes[:, 2:] += boxes[:, :2]
     return boxes
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
 # Original author: Francisco Massa:
 # https://github.com/fmassa/object-detection.torch
 # Ported to PyTorch by Max deGroot (02/01/2017)
@@ -310,8 +207,5 @@ def nms(boxes, scores, overlap=0.5, top_k=200):
         IoU = inter/union  # store result in iou
         # keep only elements with an IoU <= overlap
         idx = idx[IoU.le(overlap)]
-<<<<<<< HEAD
-=======
 
->>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
     return keep, count

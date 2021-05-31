@@ -1,8 +1,6 @@
 from configs import ssd300 as cfg
 
 import torch
-import cv2
-import numpy as np
 import torchvision.transforms as transforms
 
 
@@ -25,7 +23,7 @@ def detection_collate(batch):
     return torch.stack(imgs, 0), targets
 
 
-def base_transform(image, size, mean):
+def base_transform(size):
     transform = transforms.Compose([
         transforms.Resize(size),
         transforms.ToTensor()
@@ -37,7 +35,7 @@ class BaseTransform:
         self.size = size
 
     def __call__(self, image, boxes=None, labels=None):
-        return base_transform(image, self.size, self.mean), boxes, labels
+        return base_transform(self.size), boxes, labels
 
 
 class VOCAnnotationTransform(object):
