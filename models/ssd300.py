@@ -1,8 +1,6 @@
 import torch.nn as nn
-import numpy as np
-import torch.nn.functional as F
 import torch
-
+from configs import ssd300 as cfg
 
 vgg16_cfg = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M', 512, 512, 512]
 extra_cfg = [256, 'S', 512, 128, 'S', 256, 128, 256, 128, 256]
@@ -54,7 +52,7 @@ def make_layers(vgg16_cfg, extra_cfg, batch_norm=False):
 
 
 class SSD300(nn.Module):
-    def __init__(self, init_weights=True, num_class=21):
+    def __init__(self, init_weights=False, num_classes=21):
         super(SSD300, self).__init__()
         self.ssd = make_layers(vgg16_cfg, extra_cfg) # nn.ModuleList
         # Since lower level features (conv4_3_feats) have considerably larger scales, we take the L2 norm and rescale
@@ -63,15 +61,15 @@ class SSD300(nn.Module):
         self.rescale_factors = nn.Parameter(torch.FloatTensor(1, 512, 1, 1))  # there are 512 channels in conv4_3_feats
         nn.init.constant_(self.rescale_factors, 20)
 
-        self.num_defaults = [4, 6, 6, 6, 4, 4]
+        self.num_defaults = cfg.AR_STEPS
         self.out_channels = [] # out channels of conf4_3, 7, 8_2, 9_2, 10_2, 11_2
         self.loc_conv = [] # for bbox regression
         self.cls_conv = [] # for classification
-        self.num_class = num_class
+        self.num_classes = num_classes
         self.out_channels = [512, 1024, 512, 256, 256, 256]
         for nd, oc in zip(self.num_defaults, self.out_channels):
             self.loc_conv.append(nn.Conv2d(oc, nd * 4, kernel_size=3, padding=1))
-            self.cls_conv.append(nn.Conv2d(oc, nd * num_class, kernel_size=3, padding=1))
+            self.cls_conv.append(nn.Conv2d(oc, nd * num_classes, kernel_size=3, padding=1))
 
         self.loc_conv = nn.ModuleList(self.loc_conv)
         self.cls_conv = nn.ModuleList(self.cls_conv)
@@ -116,7 +114,7 @@ class SSD300(nn.Module):
             f = self.cls_conv[i](feature)
             f = f.permute(0, 2, 3, 1).contiguous()  # (N, 38, 38, 16), to match prior-box order (after .view())
             # (.contiguous() ensures it is stored in a contiguous chunk of memory, needed for .view() below)
-            f = f.view(batch_size, -1, self.num_class)  # (N, 5776, 4), there are a total 5776 boxes on this feature map
+            f = f.view(batch_size, -1, self.num_classes)  # (N, 5776, 4), there are a total 5776 boxes on this feature map
             classes_scores = f if classes_scores is None else torch.cat([classes_scores, f], dim=1)
 
             # Localization_scores
@@ -134,4 +132,3 @@ class SSD300(nn.Module):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu') # = He Initialization
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
-
