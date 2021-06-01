@@ -1,7 +1,6 @@
 from __future__ import print_function
 from datasets import dataset
 import torch
-import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from datasets.transforms import VOCAnnotationTransform, BaseTransform

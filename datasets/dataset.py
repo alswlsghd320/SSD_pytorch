@@ -1,17 +1,13 @@
-from configs import ssd300 as cfg
+import torch
 import os
 import cv2
-
-import xml.etree.ElementTree as ET
-import pathlib
 import numpy as np
 from PIL import Image
-import torch
+import xml.etree.ElementTree as ET
 
+from configs import ssd300 as cfg
+from datasets.transforms import VOCAnnotationTransform
 
-<<<<<<< HEAD
-class VOCDataset():
-=======
 class VOCDataset(torch.utils.data.Dataset):
 
     class_names = ('__background__',
@@ -20,36 +16,34 @@ class VOCDataset(torch.utils.data.Dataset):
                    'cow', 'diningtable', 'dog', 'horse',
                    'motorbike', 'person', 'pottedplant',
                    'sheep', 'sofa', 'train', 'tvmonitor')
->>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
 
-    def __init__(self, root, is_test=False, transform=None, target_transform=None, keep_difficult=False):
-        self.root = pathlib.Path(cfg.VOC_ROOT)
+    def __init__(self, root, is_test=False, transform=None, target_transform=VOCAnnotationTransform(), keep_difficult=False):
+        self.root = root
         self.transform = transform
         self.target_transform = target_transform
         if is_test:
-<<<<<<< HEAD
-            image_sets_file = f"{self.root}/ImageSets/Main/test.txt"
-=======
-            image_sets_file = self.root # "ImageSets/Main/test.txt"
->>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
+            image_sets_file = os.path.join(self.root, 'ImageSets', 'Main', 'test.txt')
         else:
-            image_sets_file = f"{self.root}/ImageSets/Main/trainval.txt"
+            image_sets_file = os.path.join(self.root, 'ImageSets', 'Main', 'trainval.txt')
         self.ids = VOCDataset._read_image_ids(image_sets_file)
         self.keep_difficult = keep_difficult
 
         self.class_dict = {class_name: i for i, class_name in enumerate(cfg.VOC_CLASSES)}
 
     def __getitem__(self, index):
-        image_id = self.ids[index]
-        boxes, labels, is_difficult = self._get_annotation(image_id)
-        if not self.keep_difficult:
-            boxes = boxes[is_difficult == 0]
-            labels = labels[is_difficult == 0]
-        image = self._read_image(image_id)
-        if self.transform:
-            image, boxes, labels = self.transform(image, boxes, labels)
-        if self.target_transform:
-            boxes, labels = self.target_transform(boxes, labels)
+        # image_id = self.ids[index]
+        # boxes, labels, is_difficult = self._get_annotation(image_id)
+        # if not self.keep_difficult:
+        #     boxes = boxes[is_difficult == 0]
+        #     labels = labels[is_difficult == 0]
+        # image = self._read_image(image_id) #[w, h, 3(rgb)]
+        # width, height, channel = image.shape
+        # if self.target_transform:
+        #     boxes, labels = self.target_transform(boxes, width, height)
+        # if self.transform:
+        #     image, boxes, labels = self.transform(image, boxes, labels)
+        image, boxes, labels = self.pull_item(index)
+
         return image, boxes, labels  # image(RGB), boxes = [x1,y1,x2,y2], background label is 0
 
     def __len__(self):
@@ -68,7 +62,7 @@ class VOCDataset(torch.utils.data.Dataset):
         return image_id, self._get_annotation(image_id)
 
     def _get_annotation(self, image_id):
-        annotation_file = f"{self.root}/Annotations/{image_id}.xml"
+        annotation_file = os.path.join(self.root, 'Annotations', f'{image_id}.xml')
         objects = ET.parse(annotation_file).findall("object")
         boxes = []
         labels = []
@@ -94,12 +88,12 @@ class VOCDataset(torch.utils.data.Dataset):
                 np.array(labels, dtype=np.int64),
                 np.array(is_difficult, dtype=np.uint8))
 
-<<<<<<< HEAD
     def pull_item(self, index):
-        img_id = self.ids[index]
-
-        target = ET.parse(self._annopath % img_id).getroot()
-        img = cv2.imread(self._imgpath % img_id)
+        image_id = self.ids[index]
+        annotation_filepath = os.path.join(self.root, 'Annotations', f'{image_id}.xml')
+        image_filepath = os.path.join(self.root, 'JPEGImages', f'{image_id}.jpg')
+        target = ET.parse(annotation_filepath).getroot()
+        img = cv2.imread(image_filepath)
         height, width, channels = img.shape
 
         if self.target_transform is not None:
@@ -112,27 +106,32 @@ class VOCDataset(torch.utils.data.Dataset):
             # to rgb
             img = img[:, :, (2, 1, 0)]
             # img = img.transpose(2, 0, 1)
-            target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
-        return torch.from_numpy(img).permute(2, 0, 1), target, height, width
+            #target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
+            return torch.from_numpy(img).permute(2, 0, 1), boxes, labels
         # return torch.from_numpy(img), target, height, width
 
-    def _read_image(self, image_id):
-=======
     def _read_image(self,image_id):
->>>>>>> 527ded4069b7e254461df4931abadb877283ec7d
-        image_file = f"{self.root}/JPEGImages/{image_id}.jpg"
+        image_file = os.path.join(self.root, 'JPEGImages', f'{image_id}.jpg')
         image = Image.open(image_file).convert("RGB")
         image = np.array(image)
         return image
 
-if __name__ is '__main__':
-    train_dataset = VOCDataset('')
+    def collate_fn(self, batch):
+        imgs = []
+        locs = []
+        labels = []
 
-<<<<<<< HEAD
+        for b in batch:
+            imgs.append(torch.Tensor(b[0]))
+            locs.append(torch.Tensor(b[1]))
+            labels.append(torch.Tensor(b[2]))
+
+        imgs = torch.stack(imgs, dim=0)
+
+        return imgs, locs, labels
+
 if __name__ is '__main__':
     train_dataset = VOCDataset(cfg.VOC_ROOT)
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=cfg.BATCH_SIZE,
                                                shuffle=True)
-=======
->>>>>>> 527ded4069b7e254461df4931abadb877283ec7d

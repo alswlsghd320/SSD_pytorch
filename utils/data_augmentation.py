@@ -4,7 +4,8 @@ import cv2
 import numpy as np
 import types
 from numpy import random
-
+import warnings
+warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 def intersect(box_a, box_b):
     max_xy = np.minimum(box_a[:, 2:], box_b[2:])

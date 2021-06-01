@@ -2,7 +2,7 @@ from numpy import sqrt
 import torch
 from itertools import product as product
 import math
-
+from configs import ssd300 as cfg
 
 def cxcy_to_xyxy(cxcy):
     """
@@ -18,76 +18,104 @@ def cxcy_to_gcxgcy(cxcy, priors_cxcy):
     For the center coordinates, find the offset with respect to the prior box, and scale by the size of the prior box.
     For the size coordinates, scale by the size of the prior box, and convert to the log-space.
     In the model, we are predicting bounding box coordinates in this encoded form.
-    :param cxcy (n_priors, 4): bounding boxes in center-size coordinates
-    :param priors_cxcy (n_priors, 4): prior boxes with respect to which the encoding must be performed
+    :param cxcy (num_defaults, 4): bounding boxes in center-size coordinates
+    :param priors_cxcy (num_defaults, 4): prior boxes with respect to which the encoding must be performed
     :return: encoded bounding boxes, a tensor of size (n_priors, 4)
     """
 
     return torch.cat([(cxcy[:, :2] - priors_cxcy[:, :2]) / (priors_cxcy[:, 2:]),  # g_c_x, g_c_y
                       torch.log(cxcy[:, 2:] / priors_cxcy[:, 2:])], 1)  # g_w, g_h
 
-
-def iou(gt_boxes, predicted_boxes):
-    """Return intersection-over-union (Jaccard index) of boxes.
-        each box has (cx, cy, w, h) coordinates
-    Args:
-        gt_boxes (n1, 4): ground truth boxes.
-        predicted_boxes (n2, 4): predicted boxes.
-    Returns:
-        iou (N): IoU values.
-    """
-    xyxy_gt_boxes = cxcy_to_xyxy(gt_boxes)
-    xyxy_predicted_boxes = cxcy_to_xyxy(predicted_boxes)
-    overlap_left_top = torch.max(xyxy_gt_boxes[..., :2], xyxy_predicted_boxes[..., :2])
-    overlap_right_bottom = torch.min(xyxy_gt_boxes[..., 2:], xyxy_predicted_boxes[..., 2:])
-    overlap_area = (overlap_right_bottom[..., 0] - overlap_left_top[..., 0]) * \
-                   (overlap_right_bottom[..., 1] - overlap_left_top[..., 1])
-
-    gt_area = gt_boxes[..., 2] * gt_boxes[..., 3]
-    pred_area = predicted_boxes[..., 2] * predicted_boxes[..., 3]
-    return overlap_area / (gt_area + pred_area - overlap_area + 1e-5)
-
-
-def assign_priors(gt_boxes, gt_labels, priors_boxes, iou_threshold=0.5):
-    """
-    Assign ground truth boxes and targets to priors
-    change labels of negative boxes to 0(BG label)
-    :param gt_boxes (num_targets, 4):ground truth boxes
-    :param gt_labels(num_targets):
-    :param priors_boxes (num_priors, 4): priors' coordinates (cx, cy, w, h)
-    :return:
-        boxes(num_priors, 4) : real values for priors
-        labels(num_priors): labels for priors
-    """
-    ious = iou(gt_boxes.unsqueeze(0), priors_boxes.unsqueeze(1))  # 모든 prior box들과 gt box 하나의 iou 계산해
+def intersect(box_1, box_2):
     '''
-    ious:
-    [[(gtbox0,prior0 iou), (gtbox1, prior0 iou), (gtbox2, prior0 iou), ... ]
-    [(gtbox0,prior1 iou), (gtbox1, prior1 iou), (gtbox2, prior1 iou), ... ]...]
+    :param box_1: [num_objects, 4(xmin, ymin, xmax, ymax)]
+    :param box_2: [num_defaults, 4]
+    :return: [num_objects, num_defaults]
     '''
+    A = box_1.size(0) #num_objects
+    B = box_2.size(0) #num_defaults
+    min_xy = torch.max(box_1[:, :2].unsqueeze(1).expand(A, B, 2),
+                       box_2[:, :2].unsqueeze(0).expand(A, B, 2)) # [A, B, 2(x_min, y_min)]
 
-    best_target_per_prior, best_target_per_prior_index = ious.max(1)
-    best_prior_per_target, best_prior_per_target_index = ious.max(0)
-    #  to make sure every target has a prior assigned
+    max_xy = torch.min(box_1[:, 2:].unsqueeze(1).expand(A, B, 2),
+                       box_2[:, 2:].unsqueeze(0).expand(A, B, 2)) # [A, B, 2(x_max, y_max)]
+
+    inter = torch.clamp((max_xy - min_xy), min=0)  # [A, B, 2(x_max - x_min, y_max - y_min)]
+
+    return inter[:, :, 0] * inter[:, :, 1] # [A, B] (x_max - x_min) * (y_max - y_min)
+
+def IOU(box_1, box_2):
+    '''
+    :param box_1: Ground truth bounding box ; [num_objects, 4(xmin, ymin, xmax, ymax)]
+    :param box_2: Prior boxes ; [num_defaults, 4]
+    :return: IOU(A, B) = A ∩ B / A ∪ B
+                       = A ∩ B / (A + B - A ∩ B) ; [box_1.shape[0], box_2.shape[0]]
+    '''
+    inter = intersect(box_1, box_2)
+    area_a = ((box_1[:, 2] - box_1[:, 0]) *
+              (box_1[:, 3] - box_1[:, 1])).unsqueeze(1).expand_as(inter)  # [A,B]
+    area_b = ((box_2[:, 2] - box_2[:, 0]) *
+              (box_2[:, 3] - box_2[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
+    union = area_a + area_b - inter
+    return inter / union  # [A,B]
+# def iou(gt_boxes, predicted_boxes, epsilon=1e-5):
+#     """Return intersection-over-union (Jaccard index) of boxes.
+#         each box has (cx, cy, w, h) coordinates
+#     Args:
+#         gt_boxes (n1, 4): ground truth boxes.
+#         predicted_boxes (n2, 4): predicted boxes.
+#     Returns:
+#         iou (N): IoU values.
+#     """
+#     xyxy_gt_boxes = cxcy_to_xyxy(gt_boxes)
+#     xyxy_predicted_boxes = cxcy_to_xyxy(predicted_boxes)
+#     overlap_left_top = torch.max(xyxy_gt_boxes[..., :2], xyxy_predicted_boxes[..., :2])
+#     overlap_right_bottom = torch.min(xyxy_gt_boxes[..., 2:], xyxy_predicted_boxes[..., 2:])
+#     overlap_area = (overlap_right_bottom[..., 0] - overlap_left_top[..., 0]) * \
+#                    (overlap_right_bottom[..., 1] - overlap_left_top[..., 1])
+#
+#     gt_area = gt_boxes[..., 2] * gt_boxes[..., 3]
+#     pred_area = predicted_boxes[..., 2] * predicted_boxes[..., 3]
+#     return overlap_area / (gt_area + pred_area - overlap_area + epsilon)
 
 
-# TODO : Convert fixed value to cfg value
+# def assign_priors(gt_boxes, gt_labels, priors_boxes, iou_threshold=0.5):
+#     """
+#     Assign ground truth boxes and targets to priors
+#     change labels of negative boxes to 0(BG label)
+#     :param gt_boxes (num_targets, 4):ground truth boxes
+#     :param gt_labels(num_targets):
+#     :param priors_boxes (num_defaults, 4): priors' coordinates (cx, cy, w, h)
+#     :return:
+#         boxes(num_defaults, 4) : real values for priors
+#         labels(num_defaults): labels for priors
+#     """
+#     ious = iou(gt_boxes.unsqueeze(0), priors_boxes.unsqueeze(1))  # 모든 prior box들과 gt box 하나의 iou 계산해
+#     '''
+#     ious:
+#     [[(gtbox0,prior0 iou), (gtbox1, prior0 iou), (gtbox2, prior0 iou), ... ]
+#     [(gtbox0,prior1 iou), (gtbox1, prior1 iou), (gtbox2, prior1 iou), ... ]...]
+#     '''
+#
+#     best_target_per_prior, best_target_per_prior_index = ious.max(1)
+#     best_prior_per_target, best_prior_per_target_index = ious.max(0)
+#     #  to make sure every target has a prior assigned
+
 class DefaultBox():
-    def __init__(self, cfg):
-        self.img_size = 300  # cfg['img_size']
-        self.feature_maps = [38, 19, 10, 5, 3, 1]  # cfg['feature_maps']
-        self.ar_steps = [4, 6, 6, 6, 4, 4]  # cfg['ar_steps']
-        self.aspect_ratios = [1, 2, 0.5, 3, 1 / 3]  # cfg['aspect_ratios']
+    def __init__(self):
+        self.feature_maps = cfg.FEATURE_MAPS
+        self.ar_steps = cfg.AR_STEPS
+        self.aspect_ratios = cfg.ASPECT_RATIOS
         self.m = len(self.feature_maps)
-        self.sk_min = 0.2  # cfg['sk_min']
-        self.sk_max = 0.9  # cfg['sk_max']
+        self.sk_min = cfg.SK_MIN
+        self.sk_max = cfg.SK_MAX
 
         if self.sk_min <= 0 or self.sk_max <= self.sk_min:
             raise ValueError('sk_min, sk_max must be grater than 0')
         # from k=1 to k=m+1=7
         self.sk = [self.compute_sk(i) for i in range(1, self.m + 2)]
 
-    def forward(self):
+    def __call__(self):
         offset = []
         for k, f_k in enumerate(self.feature_maps):
             for i, j in product(range(f_k), repeat=2):
@@ -104,7 +132,7 @@ class DefaultBox():
                         w = self.sk[k] * sqrt(ar)
                         h = self.sk[k] / sqrt(ar)
                         offset.append([cx, cy, w, h])
-        return torch.Tensor(offset)  # [num_db, 4]
+        return torch.Tensor(offset) #[num_defaults, 4]
 
     def compute_sk(self, k):
         if k == 1:
@@ -122,7 +150,7 @@ def hard_negative_mining(loss, gt_labels, neg_pos_ratio):
     It keeps all positive predictions and cut the number of negative predictions
     This can lead to faster optimization and a more stable training.
     :param loss: the loss(log softmax) for each example.
-    :param gt_labels: Ground Truth labels (N, 8732) = (N, num_priors)
+    :param gt_labels: Ground Truth labels (N, 8732) = (N, num_defaults)
     :param neg_pos_ratio: the ratio between the negative examples and positive examples
     :return: index information of samples that will be used (in gt_labels)
     """
