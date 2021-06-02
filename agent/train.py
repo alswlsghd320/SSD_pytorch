@@ -14,25 +14,25 @@ from utils.utils import get_optimizer
 from utils.matching_strategy import get_matching_label
 
 def train():
-
-
-    # Define Dataset
-    train_ds = VOCDataset(root=cfg.VOC_ROOT, transform=SSDAugmentation(size=cfg.SIZE, mean = cfg.MEANS) )
-
     # Define Model
-    num_classes = 1 if len(cfg.VOC_CLASSES)==1 else len(cfg.VOC_CLASSES)+1
+    num_classes = 1 if len(cfg.VOC_CLASSES) == 1 else len(cfg.VOC_CLASSES) + 1
     net = SSD300(init_weights=False, num_classes=num_classes)
 
     if torch.cuda.is_available() and cfg.is_cuda:
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+        device = 'cuda'
         net.cuda()
+    else:
+        device = 'cpu'
+
+    # Define Dataset
+    train_ds = VOCDataset(root=cfg.VOC_ROOT, transform=SSDAugmentation(size=cfg.SIZE, mean = cfg.MEANS))
 
     if cfg.PRETRAINED:
         weights = torch.load(cfg.PRETRAINED_PATH)
         net.load_state_dict(weights)
 
     optimizer = get_optimizer(net, cfg.OPTIMIZER, lr=cfg.LR, momentum=cfg.MOMENTUM, decay=cfg.DECAY)
-    criterion = MultiBoxLoss()
+    criterion = MultiBoxLoss(device=device)
 
     net.train()
 
@@ -51,8 +51,20 @@ def train():
         running_conf_loss = 0.0
 
         for i, (img, loc_t, conf_t) in tqdm.tqdm(enumerate(train_dl), total=len(train_dl), mininterval=0.01):
+            img = img.to(device, dtype=torch.float32)
+
+            for i in range(len(loc_t)):
+                loc_t[i] = loc_t[i].to(device=device)
+                loc_t[i].requires_grad = False
+                conf_t[i] = conf_t[i].to(device=device)
+                conf_t[i].requires_grad = False
+
             loc_pred, conf_pred = net(img)
+
             loc_true, conf_true = get_matching_label(loc_t, conf_t, criterion.default_box, cfg.threshold)
+
+            loc_true = loc_true.to(device=device)
+            conf_true = conf_true.to(device=device)
 
             optimizer.zero_grad()
 

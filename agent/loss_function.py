@@ -55,14 +55,15 @@ class MultiBoxLoss(nn.Module):
     (1) a localization loss for the predicted locations of the boxes (smoothL1), and
     (2) a confidence loss for the predicted class scores. (softmax, cross-entropy)
     """
-    def __init__(self, neg_pos_ratio=3, alpha=1., default_box=DefaultBox()):
+    def __init__(self, neg_pos_ratio=3, alpha=1., default_box=DefaultBox(), device='cpu'):
         '''
         :param neg_pos_ratio: number of positive samples : number of negative samples
         '''
         super(MultiBoxLoss, self).__init__()
         self.neg_pos_ratio = neg_pos_ratio
         self.alpha = alpha
-        self.default_box = default_box()
+        self.default_box = default_box().to(device, dtype=torch.float32)
+        self.device = device
 
     def forward(self, conf_pred, loc_pred, conf_true, loc_true):
         '''
@@ -79,7 +80,7 @@ class MultiBoxLoss(nn.Module):
         # Confidence loss
         with torch.no_grad():
             loss = -F.log_softmax(conf_pred, dim=2)[:, :, 0] # 0 category(backgroud)'s log_softmax losses
-            mask = hard_negative_mining(loss, conf_true, self.neg_pos_ratio) # (batch_size, num_defaults)
+            mask = hard_negative_mining(loss, conf_true, self.neg_pos_ratio, device=self.device) # (batch_size, num_defaults)
         # reduce the number of samples with hard negative mining
         conf_pred = conf_pred[mask, :] # mask가 2차원
         # hard negative mining 처리 완료된 predicted scores에서 crossentropy

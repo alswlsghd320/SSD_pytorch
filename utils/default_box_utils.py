@@ -143,7 +143,7 @@ class DefaultBox():
             return round(self.sk_min + (self.sk_max - self.sk_min) / (self.m - 1) * (k - 1), 2)
 
 
-def hard_negative_mining(loss, gt_labels, neg_pos_ratio):
+def hard_negative_mining(loss, gt_labels, neg_pos_ratio, device):
     """
     It used to suppress the presence of a large number of negative prediction.
     It works on image level
