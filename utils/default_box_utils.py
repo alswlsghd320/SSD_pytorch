@@ -58,48 +58,6 @@ def IOU(box_1, box_2):
               (box_2[:, 3] - box_2[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
     union = area_a + area_b - inter
     return inter / union  # [A,B]
-# def iou(gt_boxes, predicted_boxes, epsilon=1e-5):
-#     """Return intersection-over-union (Jaccard index) of boxes.
-#         each box has (cx, cy, w, h) coordinates
-#     Args:
-#         gt_boxes (n1, 4): ground truth boxes.
-#         predicted_boxes (n2, 4): predicted boxes.
-#     Returns:
-#         iou (N): IoU values.
-#     """
-#     xyxy_gt_boxes = cxcy_to_xyxy(gt_boxes)
-#     xyxy_predicted_boxes = cxcy_to_xyxy(predicted_boxes)
-#     overlap_left_top = torch.max(xyxy_gt_boxes[..., :2], xyxy_predicted_boxes[..., :2])
-#     overlap_right_bottom = torch.min(xyxy_gt_boxes[..., 2:], xyxy_predicted_boxes[..., 2:])
-#     overlap_area = (overlap_right_bottom[..., 0] - overlap_left_top[..., 0]) * \
-#                    (overlap_right_bottom[..., 1] - overlap_left_top[..., 1])
-#
-#     gt_area = gt_boxes[..., 2] * gt_boxes[..., 3]
-#     pred_area = predicted_boxes[..., 2] * predicted_boxes[..., 3]
-#     return overlap_area / (gt_area + pred_area - overlap_area + epsilon)
-
-
-# def assign_priors(gt_boxes, gt_labels, priors_boxes, iou_threshold=0.5):
-#     """
-#     Assign ground truth boxes and targets to priors
-#     change labels of negative boxes to 0(BG label)
-#     :param gt_boxes (num_targets, 4):ground truth boxes
-#     :param gt_labels(num_targets):
-#     :param priors_boxes (num_defaults, 4): priors' coordinates (cx, cy, w, h)
-#     :return:
-#         boxes(num_defaults, 4) : real values for priors
-#         labels(num_defaults): labels for priors
-#     """
-#     ious = iou(gt_boxes.unsqueeze(0), priors_boxes.unsqueeze(1))  # 모든 prior box들과 gt box 하나의 iou 계산해
-#     '''
-#     ious:
-#     [[(gtbox0,prior0 iou), (gtbox1, prior0 iou), (gtbox2, prior0 iou), ... ]
-#     [(gtbox0,prior1 iou), (gtbox1, prior1 iou), (gtbox2, prior1 iou), ... ]...]
-#     '''
-#
-#     best_target_per_prior, best_target_per_prior_index = ious.max(1)
-#     best_prior_per_target, best_prior_per_target_index = ious.max(0)
-#     #  to make sure every target has a prior assigned
 
 class DefaultBox():
     def __init__(self):

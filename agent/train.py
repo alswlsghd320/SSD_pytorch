@@ -53,11 +53,11 @@ def train():
         for i, (img, loc_t, conf_t) in tqdm.tqdm(enumerate(train_dl), total=len(train_dl), mininterval=0.01):
             img = img.to(device, dtype=torch.float32)
 
-            for i in range(len(loc_t)):
-                loc_t[i] = loc_t[i].to(device=device)
-                loc_t[i].requires_grad = False
-                conf_t[i] = conf_t[i].to(device=device)
-                conf_t[i].requires_grad = False
+            for j in range(len(loc_t)):
+                loc_t[j] = loc_t[j].to(device=device)
+                loc_t[j].requires_grad = False
+                conf_t[j] = conf_t[j].to(device=device)
+                conf_t[j].requires_grad = False
 
             loc_pred, conf_pred = net(img)
 
@@ -78,7 +78,7 @@ def train():
             running_conf_loss += loss_c.item()
 
             if i % 10 == 0:
-                print(f"loss : {loss.item():.4f}")
+                print(f"loc loss : {loss_l.item():.4f}, conf loss : {loss_c.item():.4f}, total loss : {loss.item():.4f}")
 
         loss_loc.append(running_loc_loss)
         loss_conf.append(running_conf_loss)
